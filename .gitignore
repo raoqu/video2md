@@ -1,2 +1,4 @@
 audio/
 md/
+video/
+__pycache__/
