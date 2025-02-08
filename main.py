@@ -30,12 +30,23 @@ def generate_markdown(text, image_paths, positions, output_md):
     relative_image_paths = [os.path.relpath(path, os.path.dirname(output_md)) for path in image_paths]
     
     with open(output_md, 'w', encoding='utf-8') as f:
-        f.write("# 转录文本\n\n")
         f.write(processed_text + "\n\n")
         f.write("# 关键帧图片\n\n")
         for img_path, pos in zip(relative_image_paths, positions):
             timestamp = format_timestamp(pos)
             f.write(f"![关键帧 {timestamp}]({img_path})\n\n")
+
+def save_text(text, txt_path):
+    try:
+        # 确保目录存在
+        os.makedirs(os.path.dirname(txt_path), exist_ok=True)
+        
+        # 保存文本文件
+        with open(txt_path, 'w', encoding='utf-8') as f:
+            f.write(text)
+            
+    except Exception as e:
+        raise Exception(f"保存文本文件失败: {str(e)}")
 
 def main(input_path):
     """主函数"""
@@ -58,6 +69,7 @@ def main(input_path):
         # 准备输出路径
         audio_path = os.path.join(AUDIO_DIR, f"{current_date}-{video_md5}.wav")
         md_path = os.path.join(MD_DIR, f"{current_date}-{video_md5}.md")
+        txt_path = os.path.join(MD_DIR, f"{current_date}-{video_md5}.txt")
         image_dir = os.path.join(MD_DIR, video_md5)
         
         # 确保必要的目录存在
@@ -73,6 +85,7 @@ def main(input_path):
         
         print("正在转录音频...")
         text = transcribe_audio_with_whisper_server(audio_path)
+        save_text(text, txt_path)
         
         # 2. 提取并保存关键帧
         print("正在提取关键帧...")
