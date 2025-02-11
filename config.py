@@ -28,6 +28,7 @@ MD_DIR = 'md'
 
 # 视频下载配置
 VIDEO_DIR = 'videos'
+TARGET_RESOLUTION = 480  # 目标分辨率，例如480p
 SUPPORTED_VIDEO_DOMAINS = {
     'youtube.com': 'youtube',
     'youtu.be': 'youtube',
@@ -37,7 +38,7 @@ SUPPORTED_VIDEO_DOMAINS = {
 # 下载器配置
 YOUTUBE_DOWNLOAD_QUALITY = 'best'
 
-BILIBILI_FORMAT = '30033'  # 可以是具体的format ID，如'80'表示1080P，或'best'表示最佳质量
+BILIBILI_FORMAT = 'best'  # 可以是具体的format ID，如'80'表示1080P，或'best'表示最佳质量
 # --------------------------------------------------------------------------------
 # 格式ID       扩展名      分辨率          文件大小       说明                  
 # --------------------------------------------------------------------------------

@@ -64,6 +64,46 @@ class VideoDownloader:
         print("-" * 80)
         return formats
 
+    def select_format(self, url, resolution):
+        """根据分辨率选择最佳的视频格式
+        
+        Args:
+            url (str): 视频URL
+            resolution (int): 目标分辨率，例如480表示480p
+            
+        Returns:
+            str: 匹配的format_id，如果没有找到合适的格式则返回None
+        """
+        formats = self.list_formats(url)
+        matched_formats = []
+        
+        for fmt in formats:
+            # 跳过没有文件大小信息的格式
+            if fmt.get('filesize_str') == 'N/A':
+                continue
+                
+            # 获取分辨率信息
+            resolution_str = fmt.get('resolution', '')
+            if not resolution_str:
+                continue
+                
+            # 解析分辨率
+            try:
+                width, height = map(int, resolution_str.split('x'))
+                # 如果高度匹配目标分辨率，添加到候选列表
+                if height == resolution:
+                    matched_formats.append(fmt)
+            except (ValueError, TypeError):
+                continue
+        
+        # 如果找到匹配的格式，返回文件大小最小的那个的format_id
+        if matched_formats:
+            smallest_format = min(matched_formats, 
+                                key=lambda x: int(x.get('filesize', float('inf'))))
+            return smallest_format.get('format_id')
+            
+        return None
+
     def download(self, url):
         raise NotImplementedError
 
@@ -73,24 +113,36 @@ class YoutubeDownloader(VideoDownloader):
         # 确保下载目录存在
         os.makedirs(VIDEO_DIR, exist_ok=True)
         
-        # 合并配置选项
-        ydl_opts = {
-            **self.default_opts,
-            'format': YOUTUBE_DOWNLOAD_QUALITY
-        }
-        
-        try:
+        def try_download(format_spec):
+            """尝试使用指定的格式下载视频"""
+            ydl_opts = {**self.default_opts, 'format': format_spec}
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 video_path = ydl.prepare_filename(info)
                 if os.path.exists(video_path):
                     return video_path
                 raise FileNotFoundError("下载完成但找不到视频文件")
-                
-        except Exception as e:
-            print("\n下载失败！正在获取可用格式信息...")
+        
+        try:
+            # 首先尝试使用配置的质量设置
+            return try_download(YOUTUBE_DOWNLOAD_QUALITY)
+        except Exception as first_error:
+            print(f"\n使用配置的质量设置下载失败: {str(first_error)}")
+            print("正在尝试使用备选分辨率...")
+            
+            # 尝试使用select_format选择合适的格式
+            format_id = self.select_format(url, TARGET_RESOLUTION)
+            if format_id:
+                print(f"找到合适的格式: {format_id}")
+                try:
+                    return try_download(format_id)
+                except Exception as second_error:
+                    print(f"\n使用备选格式下载失败: {str(second_error)}")
+            
+            # 如果都失败了，显示可用格式并抛出异常
+            print("\n所有下载尝试都失败了！正在获取可用格式信息...")
             self.list_formats(url)
-            raise Exception(f"YouTube视频下载失败: {str(e)}\n"
+            raise Exception(f"YouTube视频下载失败: {str(first_error)}\n"
                           f"请在config.py中调整YOUTUBE_DOWNLOAD_QUALITY设置")
 
 class BilibiliDownloader(VideoDownloader):
